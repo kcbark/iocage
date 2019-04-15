@@ -174,6 +174,17 @@ class IOCStart(object):
         self.defaultrouter = self.conf['defaultrouter']
         self.defaultrouter6 = self.conf['defaultrouter6']
 
+        fstab_list = []
+        with open(f'{self.iocroot}/jails/{self.uuid}/fstab', 'r') as _fstab:
+            for line in _fstab.readlines():
+                line = line.rsplit("#")[0].rstrip()
+                fstab_list.append(line)
+
+        iocage_lib.ioc_fstab.IOCFstab(
+            self.uuid,
+            'list'
+        ).__validate_fstab__(fstab_list, 'all')
+
         if wants_dhcp:
             if not bpf:
                 prop_missing_msgs.append(
@@ -930,7 +941,7 @@ class IOCStart(object):
             return errors
 
     def start_network_interface_vnet(
-        self, nic_defs, net_configs, jid, nat_addr=None
+        self, nic_defs, net_configs, jid, nat_addr=0
     ):
         """
         Start VNET on interface
@@ -949,7 +960,7 @@ class IOCStart(object):
             nic, bridge = nic_def.split(":")
 
             try:
-                if nat_addr is None:
+                if not nat_addr:
                     membermtu = self.find_bridge_mtu(bridge)
                 else:
                     membermtu = '1500'
@@ -997,7 +1008,7 @@ class IOCStart(object):
         if len(errors) != 0:
             return errors
 
-    def start_network_vnet_iface(self, nic, bridge, mtu, jid, nat_addr=None):
+    def start_network_vnet_iface(self, nic, bridge, mtu, jid, nat_addr=0):
         """
         The real meat and potatoes for starting a VNET interface.
 
@@ -1083,7 +1094,7 @@ class IOCStart(object):
                 stderr=su.STDOUT
             )
 
-            if nat_addr is None:
+            if not nat_addr:
                 try:
                     # Host interface as supplied by user also needs to be on
                     # the bridge
